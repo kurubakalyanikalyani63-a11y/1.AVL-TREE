@@ -1,0 +1,1504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Self-Tuning AVL Tree</title>
+
+<style>
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    background: #f4f7fb;
+    color: #1f2937;
+}
+
+header {
+    background: #172554;
+    color: white;
+    padding: 25px;
+    text-align: center;
+}
+
+header h1 {
+    margin: 0;
+    font-size: 30px;
+}
+
+header p {
+    margin-top: 8px;
+    color: #dbeafe;
+}
+
+.container {
+    width: 95%;
+    max-width: 1400px;
+    margin: 25px auto;
+}
+
+.controls {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 15px;
+    margin-bottom: 20px;
+}
+
+.card {
+    background: white;
+    padding: 18px;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+}
+
+.card h3 {
+    margin-top: 0;
+}
+
+input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #cbd5e1;
+    border-radius: 7px;
+    margin-bottom: 8px;
+}
+
+button {
+    border: none;
+    padding: 10px 15px;
+    border-radius: 7px;
+    cursor: pointer;
+    background: #2563eb;
+    color: white;
+    margin: 3px;
+    font-weight: bold;
+}
+
+button:hover {
+    background: #1d4ed8;
+}
+
+button.danger {
+    background: #dc2626;
+}
+
+button.success {
+    background: #16a34a;
+}
+
+button.warning {
+    background: #d97706;
+}
+
+.stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.stat {
+    background: white;
+    padding: 15px;
+    text-align: center;
+    border-radius: 10px;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.07);
+}
+
+.stat strong {
+    display: block;
+    font-size: 25px;
+    color: #2563eb;
+}
+
+.visual-area {
+    background: white;
+    border-radius: 12px;
+    padding: 20px;
+    overflow: auto;
+    min-height: 500px;
+}
+
+#tree {
+    position: relative;
+    min-width: 900px;
+    height: 500px;
+}
+
+.node {
+    position: absolute;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    border: 4px solid #2563eb;
+    background: #dbeafe;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    transform: translate(-50%, -50%);
+    z-index: 2;
+}
+
+.node.hot {
+    background: #fee2e2;
+    border-color: #dc2626;
+}
+
+.node.warm {
+    background: #fef3c7;
+    border-color: #d97706;
+}
+
+.node.cold {
+    background: #dcfce7;
+    border-color: #16a34a;
+}
+
+.node small {
+    font-size: 11px;
+    color: #374151;
+}
+
+svg {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+line {
+    stroke: #64748b;
+    stroke-width: 2;
+}
+
+.tables {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-top: 20px;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+th, td {
+    padding: 9px;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: center;
+}
+
+th {
+    background: #eff6ff;
+}
+
+.hot-text {
+    color: #dc2626;
+    font-weight: bold;
+}
+
+.cold-text {
+    color: #16a34a;
+    font-weight: bold;
+}
+
+.log {
+    height: 180px;
+    overflow-y: auto;
+    background: #111827;
+    color: #d1fae5;
+    padding: 12px;
+    border-radius: 8px;
+    font-family: monospace;
+}
+
+.legend {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin: 10px 0;
+}
+
+.legend span {
+    padding: 6px 12px;
+    border-radius: 15px;
+    font-size: 13px;
+}
+
+.legend-hot {
+    background: #fee2e2;
+}
+
+.legend-warm {
+    background: #fef3c7;
+}
+
+.legend-cold {
+    background: #dcfce7;
+}
+
+@media(max-width: 800px) {
+    .tables {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header>
+    <h1>🌳 Self-Tuning AVL Tree</h1>
+    <p>Real-Life Example: E-Commerce Product Search System</p>
+</header>
+
+<div class="container">
+
+    <div class="controls">
+
+        <div class="card">
+            <h3>Insert Product</h3>
+            <input id="insertKey" type="number" placeholder="Product ID">
+            <button onclick="insertProduct()">Insert</button>
+        </div>
+
+        <div class="card">
+            <h3>Search Product</h3>
+            <input id="searchKey" type="number" placeholder="Product ID">
+            <button class="success" onclick="searchProduct()">Search</button>
+        </div>
+
+        <div class="card">
+            <h3>Delete Product</h3>
+            <input id="deleteKey" type="number" placeholder="Product ID">
+            <button class="danger" onclick="deleteProduct()">Delete</button>
+        </div>
+
+        <div class="card">
+            <h3>Workload</h3>
+            <button class="warning" onclick="simulateWorkload()">
+                Simulate Customer Searches
+            </button>
+
+            <button onclick="resetTree()">
+                Reset
+            </button>
+        </div>
+
+    </div>
+
+    <div class="stats">
+
+        <div class="stat">
+            <strong id="nodeCount">0</strong>
+            Nodes
+        </div>
+
+        <div class="stat">
+            <strong id="treeHeight">0</strong>
+            Height
+        </div>
+
+        <div class="stat">
+            <strong id="searchCount">0</strong>
+            Searches
+        </div>
+
+        <div class="stat">
+            <strong id="rotationCount">0</strong>
+            Rotations
+        </div>
+
+        <div class="stat">
+            <strong id="hotCount">0</strong>
+            Hot Keys
+        </div>
+
+        <div class="stat">
+            <strong id="coldCount">0</strong>
+            Cold Keys
+        </div>
+
+    </div>
+
+    <div class="visual-area">
+
+        <h2>AVL Tree Visualization</h2>
+
+        <div class="legend">
+            <span class="legend-hot">🔴 Hot Key</span>
+            <span class="legend-warm">🟡 Warm Key</span>
+            <span class="legend-cold">🟢 Cold Key</span>
+        </div>
+
+        <div id="tree">
+            <svg id="edges"></svg>
+        </div>
+
+    </div>
+
+    <div class="tables">
+
+        <div class="card">
+
+            <h3>📊 Workload Statistics</h3>
+
+            <table>
+                <thead>
+                    <tr>
+                        <th>Product</th>
+                        <th>Searches</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+
+                <tbody id="frequencyTable">
+                </tbody>
+
+            </table>
+
+        </div>
+
+        <div class="card">
+
+            <h3>📜 Activity Log</h3>
+
+            <div id="log" class="log"></div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+
+// ==========================================
+// AVL TREE NODE
+// ==========================================
+
+class AVLNode {
+
+    constructor(key) {
+
+        this.key = key;
+
+        this.left = null;
+        this.right = null;
+
+        this.height = 1;
+
+        // Number of times this key is searched
+        this.frequency = 0;
+    }
+}
+
+
+// ==========================================
+// SELF-TUNING AVL TREE
+// ==========================================
+
+class SelfTuningAVL {
+
+    constructor() {
+
+        this.root = null;
+
+        this.rotations = 0;
+
+        this.totalSearches = 0;
+    }
+
+
+    height(node) {
+
+        return node ? node.height : 0;
+    }
+
+
+    updateHeight(node) {
+
+        node.height =
+            1 +
+            Math.max(
+                this.height(node.left),
+                this.height(node.right)
+            );
+    }
+
+
+    balanceFactor(node) {
+
+        return node ?
+            this.height(node.left) -
+            this.height(node.right)
+            : 0;
+    }
+
+
+    rightRotate(y) {
+
+        let x = y.left;
+
+        let T2 = x.right;
+
+        x.right = y;
+
+        y.left = T2;
+
+        this.updateHeight(y);
+        this.updateHeight(x);
+
+        this.rotations++;
+
+        log(
+            "Right rotation performed at key " +
+            y.key
+        );
+
+        return x;
+    }
+
+
+    leftRotate(x) {
+
+        let y = x.right;
+
+        let T2 = y.left;
+
+        y.left = x;
+
+        x.right = T2;
+
+        this.updateHeight(x);
+        this.updateHeight(y);
+
+        this.rotations++;
+
+        log(
+            "Left rotation performed at key " +
+            x.key
+        );
+
+        return y;
+    }
+
+
+    insert(node, key) {
+
+        if (!node) {
+
+            log(
+                "Product " +
+                key +
+                " inserted."
+            );
+
+            return new AVLNode(key);
+        }
+
+
+        if (key < node.key) {
+
+            node.left =
+                this.insert(node.left, key);
+
+        }
+        else if (key > node.key) {
+
+            node.right =
+                this.insert(node.right, key);
+
+        }
+        else {
+
+            log(
+                "Product " +
+                key +
+                " already exists."
+            );
+
+            return node;
+        }
+
+
+        this.updateHeight(node);
+
+
+        let balance =
+            this.balanceFactor(node);
+
+
+        // LL case
+
+        if (balance > 1 &&
+            key < node.left.key) {
+
+            return this.rightRotate(node);
+        }
+
+
+        // RR case
+
+        if (balance < -1 &&
+            key > node.right.key) {
+
+            return this.leftRotate(node);
+        }
+
+
+        // LR case
+
+        if (balance > 1 &&
+            key > node.left.key) {
+
+            node.left =
+                this.leftRotate(node.left);
+
+            return this.rightRotate(node);
+        }
+
+
+        // RL case
+
+        if (balance < -1 &&
+            key < node.right.key) {
+
+            node.right =
+                this.rightRotate(node.right);
+
+            return this.leftRotate(node);
+        }
+
+
+        return node;
+    }
+
+
+    insertKey(key) {
+
+        this.root =
+            this.insert(this.root, key);
+
+        render();
+    }
+
+
+    findMin(node) {
+
+        let current = node;
+
+        while (current.left) {
+
+            current = current.left;
+        }
+
+        return current;
+    }
+
+
+    delete(node, key) {
+
+        if (!node) {
+
+            return node;
+        }
+
+
+        if (key < node.key) {
+
+            node.left =
+                this.delete(node.left, key);
+
+        }
+        else if (key > node.key) {
+
+            node.right =
+                this.delete(node.right, key);
+
+        }
+        else {
+
+            if (!node.left ||
+                !node.right) {
+
+                node =
+                    node.left ||
+                    node.right;
+
+            }
+            else {
+
+                let temp =
+                    this.findMin(node.right);
+
+                node.key = temp.key;
+
+                node.frequency =
+                    temp.frequency;
+
+                node.right =
+                    this.delete(
+                        node.right,
+                        temp.key
+                    );
+            }
+        }
+
+
+        if (!node) {
+
+            return node;
+        }
+
+
+        this.updateHeight(node);
+
+
+        let balance =
+            this.balanceFactor(node);
+
+
+        if (balance > 1 &&
+            this.balanceFactor(node.left) >= 0) {
+
+            return this.rightRotate(node);
+        }
+
+
+        if (balance > 1 &&
+            this.balanceFactor(node.left) < 0) {
+
+            node.left =
+                this.leftRotate(node.left);
+
+            return this.rightRotate(node);
+        }
+
+
+        if (balance < -1 &&
+            this.balanceFactor(node.right) <= 0) {
+
+            return this.leftRotate(node);
+        }
+
+
+        if (balance < -1 &&
+            this.balanceFactor(node.right) > 0) {
+
+            node.right =
+                this.rightRotate(node.right);
+
+            return this.leftRotate(node);
+        }
+
+
+        return node;
+    }
+
+
+    deleteKey(key) {
+
+        this.root =
+            this.delete(this.root, key);
+
+        log(
+            "Product " +
+            key +
+            " deleted."
+        );
+
+        render();
+    }
+
+
+    search(node, key) {
+
+        if (!node) {
+
+            return null;
+        }
+
+
+        if (key === node.key) {
+
+            return node;
+        }
+
+
+        if (key < node.key) {
+
+            return this.search(
+                node.left,
+                key
+            );
+        }
+
+
+        return this.search(
+            node.right,
+            key
+        );
+    }
+
+
+    searchKey(key) {
+
+        let node =
+            this.search(
+                this.root,
+                key
+            );
+
+
+        this.totalSearches++;
+
+
+        if (node) {
+
+            node.frequency++;
+
+            log(
+                "Customer searched product " +
+                key +
+                " → FOUND"
+            );
+
+        }
+        else {
+
+            log(
+                "Customer searched product " +
+                key +
+                " → NOT FOUND"
+            );
+        }
+
+
+        render();
+    }
+}
+
+
+// ==========================================
+// GLOBAL TREE
+// ==========================================
+
+const tree =
+    new SelfTuningAVL();
+
+
+// ==========================================
+// PRODUCT INSERT
+// ==========================================
+
+function insertProduct() {
+
+    let key =
+        Number(
+            document.getElementById(
+                "insertKey"
+            ).value
+        );
+
+
+    if (!key) {
+
+        alert("Enter a valid Product ID");
+
+        return;
+    }
+
+
+    tree.insertKey(key);
+
+
+    document.getElementById(
+        "insertKey"
+    ).value = "";
+}
+
+
+// ==========================================
+// SEARCH
+// ==========================================
+
+function searchProduct() {
+
+    let key =
+        Number(
+            document.getElementById(
+                "searchKey"
+            ).value
+        );
+
+
+    if (!key) {
+
+        alert("Enter a valid Product ID");
+
+        return;
+    }
+
+
+    tree.searchKey(key);
+
+
+    document.getElementById(
+        "searchKey"
+    ).value = "";
+}
+
+
+// ==========================================
+// DELETE
+// ==========================================
+
+function deleteProduct() {
+
+    let key =
+        Number(
+            document.getElementById(
+                "deleteKey"
+            ).value
+        );
+
+
+    if (!key) {
+
+        alert("Enter a valid Product ID");
+
+        return;
+    }
+
+
+    tree.deleteKey(key);
+
+
+    document.getElementById(
+        "deleteKey"
+    ).value = "";
+}
+
+
+// ==========================================
+// SELF-TUNING WORKLOAD
+// ==========================================
+
+function simulateWorkload() {
+
+    if (!tree.root) {
+
+        alert("Insert products first.");
+
+        return;
+    }
+
+
+    let keys = [];
+
+    collectKeys(tree.root, keys);
+
+
+    /*
+       Real-life simulation:
+
+       Some products become popular.
+
+       Example:
+       Mobile → searched many times
+       Laptop → searched frequently
+       Keyboard → rarely searched
+    */
+
+
+    let weights = [];
+
+
+    keys.forEach(key => {
+
+        let node =
+            tree.search(
+                tree.root,
+                key
+            );
+
+
+        let weight =
+            node.frequency + 1;
+
+        weights.push(weight);
+
+    });
+
+
+    let total =
+        weights.reduce(
+            (a, b) => a + b,
+            0
+        );
+
+
+    for (let i = 0; i < 100; i++) {
+
+        let random =
+            Math.random() * total;
+
+        let sum = 0;
+
+        for (let j = 0; j < keys.length; j++) {
+
+            sum += weights[j];
+
+            if (random <= sum) {
+
+                tree.searchKey(keys[j]);
+
+                break;
+            }
+        }
+    }
+
+
+    log(
+        "⚡ Self-tuning workload simulation completed."
+    );
+
+    render();
+}
+
+
+// ==========================================
+// COLLECT KEYS
+// ==========================================
+
+function collectKeys(node, array) {
+
+    if (!node) return;
+
+    collectKeys(node.left, array);
+
+    array.push(node.key);
+
+    collectKeys(node.right, array);
+}
+
+
+// ==========================================
+// CLASSIFY HOT / WARM / COLD
+// ==========================================
+
+function getStatus(node) {
+
+    if (node.frequency >= 10) {
+
+        return "hot";
+    }
+
+    if (node.frequency >= 4) {
+
+        return "warm";
+    }
+
+    return "cold";
+}
+
+
+// ==========================================
+// TREE VISUALIZATION
+// ==========================================
+
+function render() {
+
+    const treeDiv =
+        document.getElementById("tree");
+
+    const svg =
+        document.getElementById("edges");
+
+
+    treeDiv
+        .querySelectorAll(".node")
+        .forEach(n => n.remove());
+
+
+    while (svg.firstChild) {
+
+        svg.removeChild(
+            svg.firstChild
+        );
+    }
+
+
+    if (!tree.root) {
+
+        updateStats();
+
+        updateTable();
+
+        return;
+    }
+
+
+    let positions = [];
+
+    calculatePositions(
+        tree.root,
+        450,
+        50,
+        250,
+        positions
+    );
+
+
+    positions.forEach(item => {
+
+        createNode(item.node, item.x, item.y);
+
+    });
+
+
+    positions.forEach(item => {
+
+        if (item.node.left) {
+
+            let child =
+                positions.find(
+                    p =>
+                    p.node === item.node.left
+                );
+
+            drawLine(
+                item.x,
+                item.y,
+                child.x,
+                child.y
+            );
+        }
+
+
+        if (item.node.right) {
+
+            let child =
+                positions.find(
+                    p =>
+                    p.node === item.node.right
+                );
+
+            drawLine(
+                item.x,
+                item.y,
+                child.x,
+                child.y
+            );
+        }
+
+    });
+
+
+    updateStats();
+
+    updateTable();
+}
+
+
+// ==========================================
+// CALCULATE NODE POSITIONS
+// ==========================================
+
+function calculatePositions(
+    node,
+    x,
+    y,
+    gap,
+    positions,
+    depth = 0
+) {
+
+    if (!node) return;
+
+
+    positions.push({
+
+        node: node,
+
+        x: x,
+
+        y: y
+
+    });
+
+
+    calculatePositions(
+        node.left,
+        x - gap / Math.pow(1.5, depth),
+        y + 100,
+        gap,
+        positions,
+        depth + 1
+    );
+
+
+    calculatePositions(
+        node.right,
+        x + gap / Math.pow(1.5, depth),
+        y + 100,
+        gap,
+        positions,
+        depth + 1
+    );
+}
+
+
+// ==========================================
+// CREATE NODE
+// ==========================================
+
+function createNode(node, x, y) {
+
+    const div =
+        document.createElement("div");
+
+
+    let status =
+        getStatus(node);
+
+
+    div.className =
+        "node " + status;
+
+
+    div.style.left =
+        x + "px";
+
+
+    div.style.top =
+        y + "px";
+
+
+    div.innerHTML =
+
+        `<strong>${node.key}</strong>
+         <small>Search: ${node.frequency}</small>
+         <small>H: ${node.height}</small>`;
+
+
+    document
+        .getElementById("tree")
+        .appendChild(div);
+}
+
+
+// ==========================================
+// DRAW CONNECTION
+// ==========================================
+
+function drawLine(
+    x1,
+    y1,
+    x2,
+    y2
+) {
+
+    const line =
+        document.createElementNS(
+            "http://www.w3.org/2000/svg",
+            "line"
+        );
+
+
+    line.setAttribute(
+        "x1",
+        x1
+    );
+
+    line.setAttribute(
+        "y1",
+        y1
+    );
+
+    line.setAttribute(
+        "x2",
+        x2
+    );
+
+    line.setAttribute(
+        "y2",
+        y2
+    );
+
+
+    document
+        .getElementById("edges")
+        .appendChild(line);
+}
+
+
+// ==========================================
+// STATISTICS
+// ==========================================
+
+function updateStats() {
+
+    let nodes = [];
+
+    collectNodes(
+        tree.root,
+        nodes
+    );
+
+
+    let hot = 0;
+
+    let cold = 0;
+
+
+    nodes.forEach(node => {
+
+        if (
+            getStatus(node) ===
+            "hot"
+        ) {
+
+            hot++;
+        }
+
+
+        if (
+            getStatus(node) ===
+            "cold"
+        ) {
+
+            cold++;
+        }
+
+    });
+
+
+    document.getElementById(
+        "nodeCount"
+    ).textContent = nodes.length;
+
+
+    document.getElementById(
+        "treeHeight"
+    ).textContent =
+        tree.height(tree.root);
+
+
+    document.getElementById(
+        "searchCount"
+    ).textContent =
+        tree.totalSearches;
+
+
+    document.getElementById(
+        "rotationCount"
+    ).textContent =
+        tree.rotations;
+
+
+    document.getElementById(
+        "hotCount"
+    ).textContent =
+        hot;
+
+
+    document.getElementById(
+        "coldCount"
+    ).textContent =
+        cold;
+}
+
+
+// ==========================================
+// COLLECT NODES
+// ==========================================
+
+function collectNodes(
+    node,
+    array
+) {
+
+    if (!node) return;
+
+    collectNodes(
+        node.left,
+        array
+    );
+
+    array.push(node);
+
+    collectNodes(
+        node.right,
+        array
+    );
+}
+
+
+// ==========================================
+// FREQUENCY TABLE
+// ==========================================
+
+function updateTable() {
+
+    let nodes = [];
+
+    collectNodes(
+        tree.root,
+        nodes
+    );
+
+
+    nodes.sort(
+        (a, b) =>
+        b.frequency -
+        a.frequency
+    );
+
+
+    let html = "";
+
+
+    nodes.forEach(node => {
+
+        let status =
+            getStatus(node);
+
+
+        let text =
+            status === "hot"
+                ? "HOT 🔥"
+                : status === "warm"
+                ? "WARM 🟡"
+                : "COLD 🟢";
+
+
+        html += `
+
+        <tr>
+
+            <td>${node.key}</td>
+
+            <td>${node.frequency}</td>
+
+            <td class="${status}-text">
+                ${text}
+            </td>
+
+        </tr>
+
+        `;
+
+    });
+
+
+    document.getElementById(
+        "frequencyTable"
+    ).innerHTML = html;
+}
+
+
+// ==========================================
+// ACTIVITY LOG
+// ==========================================
+
+function log(message) {
+
+    const logBox =
+        document.getElementById(
+            "log"
+        );
+
+
+    let time =
+        new Date().toLocaleTimeString();
+
+
+    logBox.innerHTML +=
+        `[${time}] ${message}<br>`;
+
+
+    logBox.scrollTop =
+        logBox.scrollHeight;
+}
+
+
+// ==========================================
+// RESET
+// ==========================================
+
+function resetTree() {
+
+    tree.root = null;
+
+    tree.rotations = 0;
+
+    tree.totalSearches = 0;
+
+
+    document.getElementById(
+        "log"
+    ).innerHTML = "";
+
+
+    log(
+        "Tree reset."
+    );
+
+
+    render();
+}
+
+
+// ==========================================
+// INITIAL DATA
+// ==========================================
+
+const initialProducts = [
+
+    50,
+    30,
+    70,
+    20,
+    40,
+    60,
+    80,
+    10,
+    25,
+    35,
+    45
+];
+
+
+initialProducts.forEach(
+    key =>
+    tree.insertKey(key)
+);
+
+
+log(
+    "Initial e-commerce products loaded."
+);
+
+
+log(
+    "Search products repeatedly to create hot keys."
+);
+
+
+render();
+
+</script>
+
+</body>
+</html>
